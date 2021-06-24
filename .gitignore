@@ -6,4 +6,6 @@ models
 patches
 plots
 tests
-
+__pycache__
+.gitignore
+.ipynb_checkpoints

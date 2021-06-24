@@ -15,7 +15,7 @@ from utils import AverageMeter
 
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 
 class Trainer:
@@ -67,7 +67,7 @@ class Trainer:
         else:
             self.test_loader = data_loader
             self.num_test = len(self.test_loader.dataset)
-        self.num_classes = 10
+        self.num_classes = 2
         self.num_channels = 3
 
         # training params
@@ -434,7 +434,7 @@ class Trainer:
         correct = 0
 
         # load the best checkpoint
-        self.load_checkpoint(best=self.best)
+        self.load_checkpoint(best = self.best)
 
         for i, (x, y) in enumerate(self.test_loader):
             x, y = x.to(self.device), y.to(self.device)
@@ -518,3 +518,97 @@ class Trainer:
             )
         else:
             print("[*] Loaded {} checkpoint @ epoch {}".format(filename, ckpt["epoch"]))
+
+            
+            
+            
+            
+    @torch.no_grad()
+    def predict(self, epoch, x, y):
+
+        """
+        Evaluate the RAM model on the validation set.
+        """
+
+        losses = AverageMeter()
+        accs = AverageMeter()
+
+    #     for i, (x, y) in enumerate(self.valid_loader):
+        x, y = x.to(self.device), y.to(self.device)
+
+        # duplicate M times
+        x = x.repeat(self.M, 1, 1, 1)
+
+        # initialize location vector and hidden state
+        self.batch_size = x.shape[0]
+        h_t, l_t = self.reset()
+
+        # extract the glimpses
+        log_pi = []
+        baselines = []
+        for t in range(self.num_glimpses - 1):
+            # forward pass through model
+            h_t, l_t, b_t, p = self.model(x, l_t, h_t)
+
+            # store
+            baselines.append(b_t)
+            log_pi.append(p)
+
+        # last iteration
+        h_t, l_t, b_t, log_probas, p = self.model(x, l_t, h_t, last=True)
+        log_pi.append(p)
+        baselines.append(b_t)
+
+        # convert list to tensors and reshape
+        # TRY AND EXCEPT TO ACCOUNT FOR A BATCH SIZE OF 1
+        try:
+            baselines = torch.stack(baselines).transpose(1, 0)
+        except:
+            baselines = torch.stack(baselines).unsqueeze(1).transpose(1, 0)
+        log_pi = torch.stack(log_pi).transpose(1, 0)
+
+        # average
+        log_probas = log_probas.view(self.M, -1, log_probas.shape[-1])
+        log_probas = torch.mean(log_probas, dim=0)
+
+        baselines = baselines.contiguous().view(self.M, -1, baselines.shape[-1])
+        baselines = torch.mean(baselines, dim=0)
+
+        log_pi = log_pi.contiguous().view(self.M, -1, log_pi.shape[-1])
+        log_pi = torch.mean(log_pi, dim=0)
+
+        # calculate reward
+        predicted = torch.max(log_probas, 1)[1]
+
+#         print("PREDICTED: ", predicted)
+
+#         R = (predicted.detach() == y).float()
+#         R = R.unsqueeze(1).repeat(1, self.num_glimpses)
+
+#         # compute losses for differentiable modules
+#         loss_action = F.nll_loss(log_probas, y)
+#         loss_baseline = F.mse_loss(baselines, R)
+
+#         # compute reinforce loss
+#         adjusted_reward = R - baselines.detach()
+#         loss_reinforce = torch.sum(-log_pi * adjusted_reward, dim=1)
+#         loss_reinforce = torch.mean(loss_reinforce, dim=0)
+
+#         # sum up into a hybrid loss
+#         loss = loss_action + loss_baseline + loss_reinforce * 0.01
+
+#         # compute accuracy
+#         correct = (predicted == y).float()
+#         acc = 100 * (correct.sum() / len(y))
+
+#         # store
+#         losses.update(loss.item(), x.size()[0])
+#         accs.update(acc.item(), x.size()[0])
+
+#         # log to tensorboard
+#         if self.use_tensorboard:
+#             iteration = epoch * len(self.valid_loader) + i
+#             log_value("valid_loss", losses.avg, iteration)
+#             log_value("valid_acc", accs.avg, iteration)
+
+        return predicted.detach().cpu().item()

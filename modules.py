@@ -99,6 +99,7 @@ class Retina:
 #                 print("COORDS: ", start[i, 1], end[i, 1], start[i, 0], end[i, 0])
 #                 print("H: ", H, "W: ", W)
                 new_coords = self.fix(from_x = start[i, 1], to_x = end[i, 1], from_y = start[i, 0], to_y = end[i, 0], H = H, W = W, size = size)
+#                 print("new_coords:", new_coords)
                 cur_patch = x[i, :, new_coords[0] : new_coords[1], new_coords[2] : new_coords[3]]
             
             
@@ -161,14 +162,10 @@ class Retina:
             from_x, to_x = H - size, H     
             
         elif ("negative x" in offenders):
-            from_x, to_x = H - size, H   
+            from_x, to_x = 0, 0 + size
             
         elif ("negative y" in offenders):
-            from_y, to_y = W - size, W  
-            
-            
-#         print("NEW: ", from_x, to_x, from_y, to_y)
-            
+            from_y, to_y = 0, 0 + size            
 
         return from_x, to_x, from_y, to_y
 
@@ -218,7 +215,7 @@ class GlimpseNetwork(nn.Module):
 
         # glimpse layer
         D_in = k * g * g * c
-        print("D_in", D_in)
+#         print("D_in", D_in)
         self.fc1 = nn.Linear(D_in, h_g)#.to('cuda:1')
 
         # location layer
@@ -236,12 +233,6 @@ class GlimpseNetwork(nn.Module):
 
         # flatten location vector
         l_t_prev = l_t_prev.view(l_t_prev.size(0), -1)
-        
-        
-        
-#         phi = self.adp_pool(phi.unsqueeze(0)).squeeze(0)
-        
-#         print("PHI SHAPE: ", phi.shape)
 
         # feed phi and l to respective fc layers
         phi_out = F.relu(self.fc1(phi))

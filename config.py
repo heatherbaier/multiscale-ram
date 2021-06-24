@@ -17,7 +17,7 @@ def add_argument_group(name):
 # glimpse network params
 glimpse_arg = add_argument_group("Glimpse Network Params")
 glimpse_arg.add_argument(
-    "--patch_size", type=int, default=50, help="size of extracted patch at highest res"
+    "--patch_size", type=int, default = 50, help="size of extracted patch at highest res"
 )
 glimpse_arg.add_argument(
     "--glimpse_scale", type=int, default=1, help="scale of successive patches"
@@ -113,7 +113,7 @@ train_arg.add_argument(
 # other params
 misc_arg = add_argument_group("Misc.")
 misc_arg.add_argument(
-    "--use_gpu", type=str2bool, default=True, help="Whether to run on the GPU"
+    "--use_gpu", type = str2bool, default = True, help="Whether to run on the GPU"
 )
 misc_arg.add_argument(
     "--best",
