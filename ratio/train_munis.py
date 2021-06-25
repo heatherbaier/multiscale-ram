@@ -38,7 +38,7 @@ def load_inputs(impath):
     return to_tens(Image.open(impath).convert('RGB')).unsqueeze(0)
 
 
-m = open("../pooling/data/migration_data.json",)
+m = open("../../pooling/data/migration_data.json",)
 mig_data = json.load(m)
 m.close()
 mig_data = pd.DataFrame.from_dict(mig_data, orient = 'index').reset_index()
@@ -63,11 +63,11 @@ def get_png_names(directory):
 
             
 
-image_names = get_png_names("../pooling/data/MEX/")
+image_names = get_png_names("../../pooling/data/MEX/")
 
 ys = []
 for i in image_names:
-        dta = mig_data[mig_data["muni_id"] == i.split("/")[4]]
+        dta = mig_data[mig_data["muni_id"] == i.split("/")[5]]
         if len(dta) != 0:
             ys.append(dta['class'].values[0])
             
