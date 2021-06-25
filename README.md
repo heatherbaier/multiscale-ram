@@ -17,5 +17,9 @@
 
 
 
+### References
+(1) https://arxiv.org/pdf/1406.6247.pdf
+(2) https://arxiv.org/pdf/2011.06190.pdf
+(3) Code: https://github.com/kevinzakka/recurrent-visual-attention
 
 
