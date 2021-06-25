@@ -10,7 +10,7 @@ import torchvision
 
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 resnet18 = torchvision.models.resnet18()
 
