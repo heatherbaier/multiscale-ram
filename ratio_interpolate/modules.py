@@ -36,7 +36,7 @@ class miniConv(torch.nn.Module):
 #         print(x.shape)
         x = self.layer1(x)
         x = self.adp_pool(x)
-        x = x.flatten(start_dim = 1)
+        x = x.flatten(start_dim = 0)
         return x
         
 
@@ -87,29 +87,36 @@ class Retina:
         """
         phi = []
         size = self.g
+        
+        B, C, H, W = x.shape
+        
+#         print("SPECS: ", B, C, H, W)
+        
+        # New size is ratio-ed to image size: minimum of H, W, then divided by 2 * the number of glimpses
+        size = int(min(H, W) / 5)
+        og_size = int(min(H, W) / 5)
+        
+#         print("SIZE: ", size)
 
-        # extract k patches of increasing size
+        # extract k patches of decreasing size
         for i in range(self.k):
             phi.append(self.extract_patch(x, l, size))
             size = int(self.s * size)
+#             print("NEW SIZE: ", size)
 
         # resize the patches to squares of size g
         for i in range(1, len(phi)):
-            k = phi[i].shape[-1] // self.g
-            phi[i] = F.avg_pool2d(phi[i], k)
+            phi[i] = torch.nn.functional.interpolate(phi[i], size = (og_size, og_size), mode = 'nearest')
+            
+#         for i in range(0, len(phi)):
+#             print(phi[i].shape)
 
         # concatenate into a single tensor and flatten
-        phi = torch.cat(phi, 1)
+        phi = torch.cat(phi, 0)
         
 #         print("PHI SHAPE: ", phi.shape)
-        
+                
         phi = self.miniConv(phi)
-#         
-#         print("PHI SHAPE: ", phi.shape)
-
-#         dsaag
-        
-#         phi = phi.view(phi.shape[0], -1)
 
         return phi
 
@@ -126,14 +133,9 @@ class Retina:
             patch: a 4D Tensor of shape (B, size, size, C)
         """
         B, C, H, W = x.shape
-        
-#         print("Original size:", size)
-        
-        # New size is ratiod to image size: minimum of H, W, then dicivded by 2 * the number of glimpses
-        size = max(int(min(H, W) / (6 * 2)), size)
-        
-#         print("New size: ", size)
-        
+                
+#         size = min(H, W) / 2
+                
         start = self.denormalize(H, l)
                 
         end = start + size
@@ -148,26 +150,10 @@ class Retina:
             cur_patch = x[i, :, start[i, 1] : end[i, 1], start[i, 0] : end[i, 0]]
             
             if self.exceeds(from_x = start[i, 1], to_x = end[i, 1], from_y = start[i, 0], to_y = end[i, 0], H = H, W = W):
-#                 print("EXCEEDS")
-#                 print("COORDS: ", start[i, 1], end[i, 1], start[i, 0], end[i, 0])
-#                 print("H: ", H, "W: ", W)
                 new_coords = self.fix(from_x = start[i, 1], to_x = end[i, 1], from_y = start[i, 0], to_y = end[i, 0], H = H, W = W, size = size)
-#                 print("new_coords:", new_coords)
                 cur_patch = x[i, :, new_coords[0] : new_coords[1], new_coords[2] : new_coords[3]]
             
-            
-            
             patch.append(cur_patch)
-#             print("PATCH DIMS: ", x[i, :, start[i, 1] : end[i, 1], start[i, 0] : end[i, 0]].shape)
-            
-#         he = 0
-#         for pat in patch:
-#             print(pat.shape)
-#             plt.imshow(pat.detach().cpu().permute(1,2,0))
-#             plt.savefig(f"./patches/test{he}.png")
-#             plt.clf()
-#             he += 1
-#         adkga
 
         return torch.stack(patch)
 
@@ -268,7 +254,7 @@ class GlimpseNetwork(nn.Module):
 
         # glimpse layer
 #         D_in = k * g * g * c
-        D_in = 3136
+        D_in = 2 * 64 * 7 * 7
 #         print("H_g: ", h_g)
 #         print("D_in", D_in)
         self.fc1 = nn.Linear(D_in, h_g)#.to('cuda:1')

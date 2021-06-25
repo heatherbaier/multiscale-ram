@@ -20,23 +20,23 @@ glimpse_arg.add_argument(
     "--patch_size", type=int, default = 50, help="size of extracted patch at highest res"
 )
 glimpse_arg.add_argument(
-    "--glimpse_scale", type=int, default=1, help="scale of successive patches"
+    "--glimpse_scale", type=int, default = .75, help="scale of successive patches"
 )
 glimpse_arg.add_argument(
-    "--num_patches", type=int, default=1, help="# of downscaled patches per glimpse"
+    "--num_patches", type=int, default = 2, help="# of interpolated patches per glimpse"
 )
 glimpse_arg.add_argument(
-    "--loc_hidden", type=int, default=128, help="hidden size of loc fc"
+    "--loc_hidden", type=int, default = 128, help="hidden size of loc fc"
 )
 glimpse_arg.add_argument(
-    "--glimpse_hidden", type=int, default=128, help="hidden size of glimpse fc"
+    "--glimpse_hidden", type=int, default = 128, help="hidden size of glimpse fc"
 )
 
 
 # core network params
 core_arg = add_argument_group("Core Network Params")
 core_arg.add_argument(
-    "--num_glimpses", type=int, default = 8, help="# of glimpses, i.e. BPTT iterations"
+    "--num_glimpses", type=int, default = 2, help="# of glimpses, i.e. BPTT iterations"
 )
 core_arg.add_argument("--hidden_size", type=int, default=256, help="hidden size of rnn")
 

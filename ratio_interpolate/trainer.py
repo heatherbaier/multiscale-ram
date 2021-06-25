@@ -61,8 +61,8 @@ class Trainer:
             self.valid_loader = data_loader[1]
 #             self.num_train = len(self.train_loader.sampler.indices)
 #             self.num_valid = len(self.valid_loader.sampler.indices)
-            self.num_train = 93
-            self.num_valid = 40
+            self.num_train = len(self.train_loader)
+            self.num_valid = len(self.valid_loader)
 
         else:
             self.test_loader = data_loader
