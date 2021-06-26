@@ -15,10 +15,11 @@ from utils import AverageMeter
 
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 
 
 class Trainer:
+    
     """A Recurrent Attention Model trainer.
 
     All hyperparameters are provided by the user in the
@@ -26,6 +27,7 @@ class Trainer:
     """
 
     def __init__(self, config, data_loader):
+        
         """
         Construct a new Trainer instance.
 
@@ -33,6 +35,7 @@ class Trainer:
             config: object containing command line arguments.
             data_loader: A data iterator.
         """
+        
         self.config = config
 
         if config.use_gpu and torch.cuda.is_available():
@@ -80,7 +83,7 @@ class Trainer:
         self.best = config.best
         self.ckpt_dir = config.ckpt_dir
         self.logs_dir = config.logs_dir
-        self.best_valid_acc = 0.0
+        self.best_valid_acc = 9000000000000
         self.counter = 0
         self.lr_patience = config.lr_patience
         self.train_patience = config.train_patience
@@ -178,7 +181,8 @@ class Trainer:
             # # reduce lr if validation loss plateaus
             self.scheduler.step(-valid_acc)
 
-            is_best = valid_acc > self.best_valid_acc
+#             is_best = valid_acc > self.best_valid_acc
+            is_best = val_mae <  self.best_valid_acc
             msg1 = "train loss: {:.3f} - train acc: {:.3f} "
             msg2 = "- val loss: {:.3f} - val acc: {:.3f} - val err: {:.3f}"
             msg4 = "- train mae: {:.3f} - val mae: {:.3f}"
@@ -198,7 +202,7 @@ class Trainer:
             if self.counter > self.train_patience:
                 print("[!] No improvement in a while, stopping training.")
                 return
-            self.best_valid_acc = max(valid_acc, self.best_valid_acc)
+            self.best_valid_acc = min(val_mae, self.best_valid_acc)
             self.save_checkpoint(
                 {
                     "epoch": epoch + 1,
@@ -253,6 +257,9 @@ class Trainer:
                     # forward pass through model
                     h_t, l_t, b_t, p = self.model(x, l_t, h_t)
 
+#                     print("L_t: ", l_t)
+#                     print("L_t[0:9]: ", l_t[0:9])
+                    
                     # store
                     locs.append(l_t[0:9])
                     baselines.append(b_t)
@@ -265,6 +272,10 @@ class Trainer:
                 log_pi.append(p)
                 baselines.append(b_t)
                 locs.append(l_t[0:9])
+            
+#                 print("L_t: ", l_t)
+#                 print("L_t shape: ", l_t.shape)
+#                 print("LOCS: ", locs)
                 
                 # convert list to tensors and reshape
                 try:
@@ -293,7 +304,7 @@ class Trainer:
 
                 # sum up into a hybrid loss
 #                 loss = loss_action + loss_baseline + loss_reinforce * 0.01
-                loss = loss_action + loss_baseline + loss_reinforce + loss_cont * 0.01
+                loss = loss_cont + loss_action + loss_baseline + loss_reinforce * 0.01
 
                 # compute accuracy
                 correct = (predicted == y).float()
@@ -572,40 +583,52 @@ class Trainer:
         return cont_pred
 
     
-@torch.no_grad()
-def predict(self, epoch, x, y, y_cont, checkpoint):
 
-    """
-    Evaluate the RAM model on the validation set.
-    """
 
-    self.model.load_state_dict(checkpoint)
 
-    losses = AverageMeter()
-    accs = AverageMeter()
 
-    x, y = x.to(self.device), y.to(self.device)
+    @torch.no_grad()
+    def extract_locations(self, x):
+        
+        """
+        Train the model for 1 epoch of the training set.
 
-    # duplicate M times
-    x = x.repeat(self.M, 1, 1, 1)
+        An epoch corresponds to one full pass through the entire
+        training set in successive mini-batches.
 
-    # initialize location vector and hidden state
-    self.batch_size = x.shape[0]
-    h_t, l_t = self.reset()
+        This is used by train() and should not be called manually.
+        """
+        
+        
+        
 
-    # extract the glimpses
-    log_pi = []
-    baselines = []
-    for t in range(self.num_glimpses - 1):
+        x = x.to(self.device)
 
-        # forward pass through model
-        h_t, l_t, b_t, p = self.model(x, l_t, h_t)
+        # initialize location vector and hidden state
+        self.batch_size = x.shape[0]
+        h_t, l_t = self.reset()
 
-        # store
-        baselines.append(b_t)
-        log_pi.append(p)
+        # extract the glimpses
+        locs = []
+        log_pi = []
+        baselines = []
+        for t in range(self.num_glimpses - 1):
+            
+            # forward pass through model
+            h_t, l_t, b_t, p = self.model(x, l_t, h_t)
 
-    # last iteration
-    h_t, l_t, b_t, log_probas, p, cont_pred = self.model(x, l_t, h_t, last=True)
+            # store
+            locs.append(l_t[0:9])
+            baselines.append(b_t)
+            log_pi.append(p)
 
-    return cont_pred
+        # last iteration
+        h_t, l_t, b_t, log_probas, p, cont_pred = self.model(x, l_t, h_t, last=True)
+        
+        locs.append(l_t[0:9])
+        
+        locs = torch.cat([locs[i].unsqueeze(0) for i in range(4)])
+                
+        return locs
+            
+

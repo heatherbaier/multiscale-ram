@@ -90,6 +90,8 @@ class Retina:
         
         B, C, H, W = x.shape
         
+#         print("L: ", l)
+        
 #         print("SPECS: ", B, C, H, W)
         
         # New size is ratio-ed to image size: minimum of H, W, then divided by 2 * the number of glimpses
@@ -134,10 +136,8 @@ class Retina:
         """
         B, C, H, W = x.shape
                 
-#         size = min(H, W) / 2
-                
         start = self.denormalize(H, l)
-                
+                        
         end = start + size
 
         # pad with zeros
@@ -255,8 +255,6 @@ class GlimpseNetwork(nn.Module):
         # glimpse layer
 #         D_in = k * g * g * c
         D_in = 1 * 64 * 7 * 7
-#         print("H_g: ", h_g)
-#         print("D_in", D_in)
         self.fc1 = nn.Linear(D_in, h_g)#.to('cuda:1')
 
         # location layer
@@ -269,6 +267,9 @@ class GlimpseNetwork(nn.Module):
         self.adp_pool = torch.nn.AdaptiveMaxPool1d((2000))
 
     def forward(self, x, l_t_prev):
+        
+#         print("l_t_prev: ", l_t_prev)
+        
         # generate glimpse phi from image x
         phi = self.retina.foveate(x, l_t_prev)
 
@@ -368,12 +369,7 @@ class ActionNetwork(nn.Module):
         self.fc_cont = nn.Linear(output_size * 2, 1)
         
         
-    def forward(self, h_t, extract_features = False):
-        
-#         if extract_features:
-            
-            
-            
+    def forward(self, h_t):
                         
         # Input a_t into classifer for preds for each class for num_glimpses == 2, shape will be [2, 256]
         a_t_class = F.log_softmax(self.fc_class1(h_t), dim = 1).flatten(start_dim = 0) # shape goes from [2,2] -> [1,4]
@@ -418,11 +414,24 @@ class LocationNetwork(nn.Module):
 
         self.std = std
 
+#         hid_size = input_size // 2
+#         self.fc = nn.Linear(input_size, hid_size)
+#         self.fc_lt = nn.Linear(hid_size, output_size)
+        
+        # Flattened specs for 2 glimpses
+        input_size = 512
         hid_size = input_size // 2
         self.fc = nn.Linear(input_size, hid_size)
-        self.fc_lt = nn.Linear(hid_size, output_size)
+        self.fc_lt = nn.Linear(hid_size, output_size)        
 
     def forward(self, h_t):
+        
+#         print("H_t.shape: ", h_t.shape)
+        
+        h_t = h_t.flatten(start_dim = 0).unsqueeze(0)
+        
+#         print("H_t.shape: ", h_t.shape)
+        
         # compute mean
         feat = F.relu(self.fc(h_t.detach()))
         mu = torch.tanh(self.fc_lt(feat))
