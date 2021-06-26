@@ -15,7 +15,7 @@ from utils import AverageMeter
 
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
-os.environ["CUDA_VISIBLE_DEVICES"] = "5"
+os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 
 
 class Trainer:
@@ -70,7 +70,8 @@ class Trainer:
         else:
             self.test_loader = data_loader
             self.num_test = len(self.test_loader.dataset)
-        self.num_classes = 2
+            
+        self.num_classes = 4
         self.num_channels = 3
 
         # training params
@@ -424,7 +425,7 @@ class Trainer:
             loss_reinforce = torch.mean(loss_reinforce, dim=0)
 
             # sum up into a hybrid loss
-            loss = loss_action + loss_baseline + loss_reinforce + loss_cont * 0.01
+            loss = loss_cont + loss_action + loss_baseline + loss_reinforce * 0.01
 
             # compute accuracy
             correct = (predicted == y).float()
@@ -588,7 +589,7 @@ class Trainer:
 
 
     @torch.no_grad()
-    def extract_locations(self, x):
+    def extract_locations(self, x, checkpoint):
         
         """
         Train the model for 1 epoch of the training set.
@@ -599,8 +600,7 @@ class Trainer:
         This is used by train() and should not be called manually.
         """
         
-        
-        
+        self.model.load_state_dict(checkpoint)
 
         x = x.to(self.device)
 

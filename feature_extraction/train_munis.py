@@ -19,14 +19,14 @@ from PIL import Image
 import torch
 
 import utils
-import data_loader
+# import data_loader
 
 from trainer import Trainer
 from config import get_config
 
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 
 import pandas as pd
 import json
@@ -44,7 +44,7 @@ mig_data = json.load(m)
 m.close()
 mig_data = pd.DataFrame.from_dict(mig_data, orient = 'index').reset_index()
 mig_data.columns = ['muni_id', 'num_migrants']
-q = 2
+q = 4
 mig_data['class'] = pd.qcut(mig_data['num_migrants'], q = q, labels = [i for i in range(q)])
 mig_data
 
@@ -64,7 +64,7 @@ def get_png_names(directory):
 
             
 
-image_names = get_png_names("../../pooling/data/MEX/")
+image_names = get_png_names("../../attn/data/MEX/")
 
 y_class, y_mig = [], []
 
@@ -82,11 +82,7 @@ train_num = int(len(image_names) * .70)
 train_indices = random.sample(range(0, len(image_names)), train_num)
 val_indices = [i for i in range(0, len(image_names)) if i not in train_indices]
 
-
 batch_size = 1
-
-# train = [(load_inputs(image_paths[i]).squeeze()[:, 0:28, 0:28], ys[i]) for i in range(0, 93)]
-# val = [(load_inputs(image_paths[i]).squeeze()[:, 0:28, 0:28], ys[i]) for i in range(93, 133)]
 
 train = [(torchvision.transforms.functional.adjust_brightness(load_inputs(image_names[i]), brightness_factor = 2).squeeze(), y_class[i], y_mig[i]) for i in train_indices]
 val = [(torchvision.transforms.functional.adjust_brightness(load_inputs(image_names[i]), brightness_factor = 2).squeeze(), y_class[i], y_mig[i]) for i in val_indices]

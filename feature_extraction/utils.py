@@ -7,6 +7,11 @@ import matplotlib.patches as patches
 from PIL import Image
 
 
+from torchvision import transforms
+
+
+
+
 def denormalize(T, coords):
     return 0.5 * ((coords + 1.0) * T)
 
@@ -150,3 +155,32 @@ def save_config(config):
 
     with open(param_path, "w") as fp:
         json.dump(config.__dict__, fp, indent=4, sort_keys=True)
+
+        
+        
+def load_inputs(impath):
+    to_tens = transforms.ToTensor()
+    return to_tens(Image.open(impath).convert('RGB')).unsqueeze(0)
+
+
+def get_png_names(directory):
+    images = []
+    for i in os.listdir(directory):
+        try:
+            if os.path.isdir(os.path.join(directory, i)):
+                new_path = os.path.join(directory, i, "pngs")
+                image = os.listdir(new_path)[0]
+                images.append(os.path.join(directory, i, "pngs", image))
+        except:
+            pass
+    return images
+
+
+def get_ys(image_names, mig_data):
+    y_class, y_mig = [], []
+    for i in image_names:
+        dta = mig_data[mig_data["muni_id"] == i.split("/")[5]]
+        if len(dta) != 0:
+            y_class.append(dta['class'].values[0])
+            y_mig.append(dta['num_migrants'].values[0])
+    return y_class, y_mig

@@ -10,7 +10,7 @@ from PIL import Image
 from tqdm import tqdm
 import pandas as pd
 import torchvision
-import data_loader
+import random
 import shutil
 import pickle
 import torch
@@ -55,7 +55,7 @@ def get_png_names(directory):
 
             
 
-image_names = get_png_names("../../pooling/data/MEX/")
+image_names = get_png_names("../../attn/data/MEX/")
 
 
 y_class, y_mig = [], []
@@ -67,7 +67,6 @@ for i in image_names:
             y_mig.append(dta['num_migrants'].values[0])
 
 
-import random
 
 train_num = int(25 * .70)
 
@@ -76,27 +75,20 @@ val_indices = [i for i in range(0, 25) if i not in train_indices]
 
 
 
-import torchvision
 
 batch_size = 1
-
-# train = [(load_inputs(image_paths[i]).squeeze()[:, 0:28, 0:28], ys[i]) for i in range(0, 93)]
-# val = [(load_inputs(image_paths[i]).squeeze()[:, 0:28, 0:28], ys[i]) for i in range(93, 133)]
-
-# brighten = torchvision.transforms.functional.adjust_brightness(brightness_factor = 2)
-
-
 train = [(torchvision.transforms.functional.adjust_brightness(load_inputs(image_names[i]), brightness_factor = 2).squeeze(), y_class[i], y_mig[i]) for i in train_indices]
 val = [(torchvision.transforms.functional.adjust_brightness(load_inputs(image_names[i]), brightness_factor = 2).squeeze(), y_class[i], y_mig[i]) for i in val_indices]
-
-
 train_dl = torch.utils.data.DataLoader(train, batch_size = batch_size, shuffle = True)
 val_dl = torch.utils.data.DataLoader(val, batch_size = batch_size, shuffle = True)
             
             
-config, unparsed = get_config()            
-            
+config, unparsed = get_config()                    
 trainer = Trainer(config, (train_dl, val_dl))    
+
+
+checkpoint = torch.load("./ckpt/ram_4_50x50_0.75_model_best.pth.tar")
+checkpoint = checkpoint["model_state"]
             
             
 
@@ -109,8 +101,58 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from utils import denormalize, bounding_box
 
+
 def denormalize(T, coords):
     return 0.5 * ((coords + 1.0) * T)
+
+
+def exceeds(from_x, to_x, from_y, to_y, H, W):
+    """Check whether the extracted patch will exceed
+    the boundaries of the image of size `T`.
+    """
+    if (from_x < 0) or (from_y < 0) or (to_x > H) or (to_y > W):
+        return True
+    return False
+
+
+def fix(from_x, to_x, from_y, to_y, H, W, size):
+
+    """
+    Check whether the extracted patch will exceed
+    the boundaries of the image of size `T`.
+    If it will exceed, make a list of the offending reasons and fix them
+    """
+
+    offenders = []
+
+    if (from_x < 0):
+        offenders.append("negative x")
+    if from_y < 0:
+        offenders.append("negative y")
+    if from_x > H:
+        offenders.append("from_x exceeds h")            
+    if to_x > H:
+        offenders.append("to_x exceeds h")
+    if from_y > W:
+        offenders.append("from_y exceeds w")
+    if to_y > W:
+        offenders.append("to_y exceeds w")            
+
+
+    if ("from_y exceeds w" in offenders) or ("to_y exceeds w" in offenders):
+        from_y, to_y = W - size, W
+
+    if ("from_x exceeds h" in offenders) or ("to_x exceeds h" in offenders):
+        from_x, to_x = H - size, H     
+
+    elif ("negative x" in offenders):
+        from_x, to_x = 0, 0 + size
+
+    elif ("negative y" in offenders):
+        from_y, to_y = 0, 0 + size            
+
+    return from_x, to_x, from_y, to_y
+
 
 
 
@@ -122,7 +164,7 @@ for i in image_names:
     
     muni_id = i.split("/")[5]
     image = load_inputs(i)
-    locations = trainer.extract_locations(image)
+    locations = trainer.extract_locations(image, checkpoint)
     
     start = [denormalize(image.shape[2], l) for l in locations]
     start = torch.cat([start[l].unsqueeze(0) for l in range(4)])
@@ -132,6 +174,8 @@ for i in image_names:
     size = int(min(H, W) / 5)
     
     end = start + size
+    
+#     print(start, end)
     
     coords_dict = {}
     
@@ -144,13 +188,17 @@ for i in image_names:
         from_y = from_coords[0][1].item()
         
         to_x = to_coords[0][0].item()
-        to_y = to_coords[0][1] .item()       
+        to_y = to_coords[0][1] .item()   
         
+        if exceeds(from_x = from_x, to_x = to_x, from_y = from_y, to_y = to_y, H = H, W = W):
+        
+            from_x, to_x, from_y, to_y = fix(from_x = from_x, to_x = to_x, from_y = from_y, to_y = to_y, H = H, W = W, size = size)
+                
         coords_dict['glimpse' + str(c)] = {'from_x': from_x, 'to_x': to_x, 'from_y': from_y, 'to_y': to_y}
     
     locations_dict[i] = coords_dict
     
     
     
-with open("glimpses.json", "w") as outfile: 
+with open("locations_extract.json", "w") as outfile: 
     json.dump(locations_dict, outfile)

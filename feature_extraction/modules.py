@@ -10,9 +10,9 @@ import torchvision
 
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 
-resnet18 = torchvision.models.resnet18()
+resnet = torchvision.models.resnet18()
 
 device = "cuda"
 
@@ -70,10 +70,10 @@ class Retina:
     """
 
     def __init__(self, g, k, s):
+        
         self.g = g
         self.k = k
         self.s = s
-        self.miniConv = miniConv(resnet = resnet18).to(device)
 
     def foveate(self, x, l):
         """Extract `k` square patches of size `g`, centered
@@ -90,16 +90,10 @@ class Retina:
         
         B, C, H, W = x.shape
         
-#         print("L: ", l)
-        
-#         print("SPECS: ", B, C, H, W)
-        
         # New size is ratio-ed to image size: minimum of H, W, then divided by 2 * the number of glimpses
         size = int(min(H, W) / 5)
         og_size = int(min(H, W) / 5)
         
-#         print("SIZE: ", size)
-
         # extract k patches of decreasing size
         for i in range(self.k):
             phi.append(self.extract_patch(x, l, size))
@@ -109,17 +103,10 @@ class Retina:
         # resize the patches to squares of size g
         for i in range(1, len(phi)):
             phi[i] = torch.nn.functional.interpolate(phi[i], size = (og_size, og_size), mode = 'nearest')
-            
-#         for i in range(0, len(phi)):
-#             print(phi[i].shape)
 
         # concatenate into a single tensor, send to minConv, and flatten
         phi = torch.cat(phi, 0)
-                        
-        phi = self.miniConv(phi)
-        
-#         print("PHI SHAPE: ", phi.shape)
-        
+
         return phi
 
     def extract_patch(self, x, l, size):
@@ -157,6 +144,7 @@ class Retina:
 
         return torch.stack(patch)
 
+    
     def denormalize(self, T, coords):
         """Convert coordinates in the range [-1, 1] to
         coordinates in the range [0, T] where `T` is
@@ -164,6 +152,7 @@ class Retina:
         """
         return (0.5 * ((coords + 1.0) * T)).long()
 
+    
     def exceeds(self, from_x, to_x, from_y, to_y, H, W):
         """Check whether the extracted patch will exceed
         the boundaries of the image of size `T`.
@@ -172,9 +161,13 @@ class Retina:
             return True
         return False
 
+    
     def fix(self, from_x, to_x, from_y, to_y, H, W, size):
-        """Check whether the extracted patch will exceed
+        
+        """
+        Check whether the extracted patch will exceed
         the boundaries of the image of size `T`.
+        If it will exceed, make a list of the offending reasons and fix them
         """
         
         offenders = []
@@ -192,7 +185,6 @@ class Retina:
         if to_y > W:
             offenders.append("to_y exceeds w")            
             
-#         print("OFFENDERS: ", offenders)
         
         if ("from_y exceeds w" in offenders) or ("to_y exceeds w" in offenders):
             from_y, to_y = W - size, W
@@ -254,7 +246,7 @@ class GlimpseNetwork(nn.Module):
 
         # glimpse layer
 #         D_in = k * g * g * c
-        D_in = 1 * 64 * 7 * 7
+        D_in = 1 * 516 * 7 * 7
         self.fc1 = nn.Linear(D_in, h_g)#.to('cuda:1')
 
         # location layer
@@ -265,13 +257,35 @@ class GlimpseNetwork(nn.Module):
         self.fc4 = nn.Linear(h_l, h_g + h_l)#.to('cuda:1')
         
         self.adp_pool = torch.nn.AdaptiveMaxPool1d((2000))
-
+        
+        
+        self.conv1_miniConv = resnet.conv1.to(device)
+        self.bn1_miniConv = resnet.bn1.to(device)
+        self.relu_miniConv = resnet.relu.to(device)
+        self.maxpool_miniConv = resnet.maxpool.to(device)
+        self.layer1_miniConv = resnet.layer1.to(device)
+        self.layer2_miniConv = resnet.layer2.to(device)
+        self.layer3_miniConv = resnet.layer3.to(device)
+        self.layer4_miniConv = resnet.layer4.to(device)
+        self.adp_pool_miniConv = torch.nn.AdaptiveAvgPool3d((516, 7, 7)).to(device)
+        
+        
     def forward(self, x, l_t_prev):
-        
-#         print("l_t_prev: ", l_t_prev)
-        
+                
         # generate glimpse phi from image x
         phi = self.retina.foveate(x, l_t_prev)
+        
+        
+        # minConv layers (these need to be here in order to be registered as trainable model paramerters)
+        phi = self.conv1_miniConv(phi)
+        phi = self.bn1_miniConv(phi)
+        phi = self.relu_miniConv(phi)
+        phi = self.maxpool_miniConv(phi)
+        phi = self.layer1_miniConv(phi)
+        phi = self.adp_pool_miniConv(phi)
+        # Keep a batch_size = num_glimpses for predictions at each scale
+        phi = phi.flatten(start_dim = 1)  
+        
 
         # flatten location vector
         l_t_prev = l_t_prev.view(l_t_prev.size(0), -1)
