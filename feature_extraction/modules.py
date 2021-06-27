@@ -246,7 +246,8 @@ class GlimpseNetwork(nn.Module):
 
         # glimpse layer
 #         D_in = k * g * g * c
-        D_in = 1 * 516 * 7 * 7
+        D_in = 1 * 512 * 7 * 7
+        print("H_g: ", h_g)
         self.fc1 = nn.Linear(D_in, h_g)#.to('cuda:1')
 
         # location layer
@@ -256,7 +257,7 @@ class GlimpseNetwork(nn.Module):
         self.fc3 = nn.Linear(h_g, h_g + h_l)#.to('cuda:1')
         self.fc4 = nn.Linear(h_l, h_g + h_l)#.to('cuda:1')
         
-        self.adp_pool = torch.nn.AdaptiveMaxPool1d((2000))
+#         self.adp_pool = torch.nn.AdaptiveMaxPool1d((2000))
         
         
         self.conv1_miniConv = resnet.conv1.to(device)
@@ -267,7 +268,7 @@ class GlimpseNetwork(nn.Module):
         self.layer2_miniConv = resnet.layer2.to(device)
         self.layer3_miniConv = resnet.layer3.to(device)
         self.layer4_miniConv = resnet.layer4.to(device)
-        self.adp_pool_miniConv = torch.nn.AdaptiveAvgPool3d((516, 7, 7)).to(device)
+        self.adp_pool_miniConv = torch.nn.AdaptiveAvgPool3d((512, 7, 7)).to(device)
         
         
     def forward(self, x, l_t_prev):
@@ -299,6 +300,8 @@ class GlimpseNetwork(nn.Module):
 
         # feed to fc layer
         g_t = F.relu(what + where)
+        
+#         print("g_t.shape", g_t.shape)
 
         return g_t
 
@@ -336,6 +339,10 @@ class CoreNetwork(nn.Module):
 
     def __init__(self, input_size, hidden_size):
         super().__init__()
+        
+#         print("input: ", input_size, "hidden: ", hidden_size)
+        
+#         input_size = 644
 
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -344,6 +351,7 @@ class CoreNetwork(nn.Module):
         self.h2h = nn.Linear(hidden_size, hidden_size)
 
     def forward(self, g_t, h_t_prev):
+#         print(g_t.shape)
         h1 = self.i2h(g_t)
         h2 = self.h2h(h_t_prev)
         h_t = F.relu(h1 + h2)

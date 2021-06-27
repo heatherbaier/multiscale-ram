@@ -18,12 +18,12 @@
 | Ratio scaled to size   |     70.99%     |        46       |        97       |     4.26%
 | Ratio no scaling       |     67.892     |        91       |       142       |     1.16%
 | Ratio interpolate      |     70.60%     |       114       |       155       |     3.87%
-| Continuous V1          |    1613.192    |        48       |                 |      --
-| Continuous V2          |    1583.119    |                 |                 |      --
+| Continuous             |    1426.60    |        170       |                 |      --
 
 ### References
 1. https://arxiv.org/pdf/1406.6247.pdf
 2. https://arxiv.org/pdf/2011.06190.pdf
 3. Code: https://github.com/kevinzakka/recurrent-visual-attention
-
-
+4. https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.97.9314&rep=rep1&type=pdf
+5. https://github.com/cayetanobv/raster2xyz
+6. https://papers.nips.cc/paper/2014/file/09c6c3783b4a70054da74f2538ed47c6-Paper.pdf

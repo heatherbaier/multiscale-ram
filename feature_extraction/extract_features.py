@@ -59,6 +59,7 @@ from torch.utils.data.sampler import SubsetRandomSampler
 
 
 class miniConv(torch.nn.Module):
+    
     def __init__(self, resnet):
         super().__init__()
         
@@ -72,6 +73,10 @@ class miniConv(torch.nn.Module):
         self.layer4_miniConv = resnet.layer4
         self.adp_pool_miniConv = torch.nn.AdaptiveAvgPool3d((512, 7, 7))
         
+        D_in = 1 * 512 * 7 * 7
+        h_g = 512
+        self.fc1 = torch.nn.Linear(D_in, h_g)#.to('cuda:1')
+        
     def forward(self, phi):
         
         phi = self.conv1_miniConv(phi)
@@ -84,6 +89,7 @@ class miniConv(torch.nn.Module):
         phi = self.layer4_miniConv(phi)
         phi = self.adp_pool_miniConv(phi)
         phi = phi.flatten(start_dim = 1)  
+        phi = self.fc1(phi)
         return phi
     
     
@@ -100,9 +106,11 @@ checkpoint = torch.load("./ckpt/ram_4_50x50_0.75_model_best.pth.tar")
 checkpoint = checkpoint["model_state"]
 
 matching_keys = [p for p in list(checkpoint.keys()) if "_miniConv" in p]
+matching_keys2 = [p for p in list(checkpoint.keys()) if p == 'sensor.fc1.weight' or p == 'sensor.fc1.bias']
+[matching_keys2.append(k) for k in matching_keys]
 
 weights = {}
-for mk in matching_keys:
+for mk in matching_keys2:
     miniConv_model_key = mk.replace("sensor.", "")
     weights[miniConv_model_key] = checkpoint[mk]
     

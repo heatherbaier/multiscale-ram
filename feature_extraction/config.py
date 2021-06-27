@@ -29,7 +29,7 @@ glimpse_arg.add_argument(
     "--loc_hidden", type=int, default = 128, help="hidden size of loc fc"
 )
 glimpse_arg.add_argument(
-    "--glimpse_hidden", type=int, default = 128, help="hidden size of glimpse fc"
+    "--glimpse_hidden", type=int, default = 512, help="hidden size of glimpse fc"
 )
 
 

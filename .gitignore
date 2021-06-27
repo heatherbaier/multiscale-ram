@@ -1,4 +1,4 @@
-ckpt
+ckpt*
 data
 logs
 mnist_tests
@@ -9,3 +9,6 @@ tests
 __pycache__
 .gitignore
 .ipynb_checkpoints
+archive
+*.csv
+*.png
