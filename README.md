@@ -12,15 +12,15 @@
 
 ### Classification Model Results
 
-|       Model            |     Acc.       |   # Best Epoch  | # Total Epochs  |  Improvement
-|------------------------|----------------|-----------------|-----------------|--------------
-| Baseline (OG RAM)      |     66.73%     |        83       |       132       |      --
-| Ratio scaled to size   |     70.99%     |        46       |        97       |     4.26%
-| Ratio no scaling       |     67.89%     |        91       |       142       |     1.16%
-| Ratio interpolate      |     70.60%     |       114       |       155       |     3.87%
-| Continuous (imagery)   |    1280.28     |       161       |       200       |      --
-| Continuous (i + c)     |    1642.93     |        44       |                 |      --
-
+|       Model            |     Acc.       |    r2   |   # Best Epoch  | # Total Epochs  |  Improvement
+|------------------------|----------------|---------|-----------------|-----------------|---------------
+| Baseline (OG RAM)      |     66.73%     |         |        83       |       132       |      --
+| Ratio scaled to size   |     70.99%     |         |        46       |        97       |     4.26%
+| Ratio no scaling       |     67.89%     |         |        91       |       142       |     1.16%
+| Ratio interpolate      |     70.60%     |         |       114       |       155       |     3.87%
+| Continuous (imagery)   |    1280.28     | .55/.6  |       161       |       200       |      --
+| Continuous (i + c) v1  |    1387.54     |   .48   |       129       |       180       |  * Census data in h_t before all of the FC layers
+| Continuous (i + c) v2  |    1391.49     |         |        48       |                 |  * Census data placed only in fc_cont 
 
 
 ### References

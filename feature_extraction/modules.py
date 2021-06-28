@@ -10,7 +10,7 @@ import torchvision
 
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
-os.environ["CUDA_VISIBLE_DEVICES"] = "4"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 
 resnet = torchvision.models.resnet18()
@@ -240,10 +240,7 @@ class GlimpseNetwork(nn.Module):
         self.maxpool_miniConv = resnet.maxpool.to(device)
         self.layer1_miniConv = resnet.layer1.to(device)
         self.layer2_miniConv = resnet.layer2.to(device)
-#         self.layer3_miniConv = resnet.layer3.to(device)
-#         self.layer4_miniConv = resnet.layer4.to(device)
         self.adp_pool_miniConv = torch.nn.AdaptiveAvgPool2d((1, 1)).to(device)
-#         self.adp_pool_miniConv = torch.nn.AdaptiveAvgPool2d((512, 1, 1)).to(device)
         
         
     def forward(self, x, l_t_prev):
@@ -258,8 +255,6 @@ class GlimpseNetwork(nn.Module):
         phi = self.maxpool_miniConv(phi)
         phi = self.layer1_miniConv(phi)
         phi = self.layer2_miniConv(phi)
-#         phi = self.layer3_miniConv(phi)
-#         phi = self.layer4_miniConv(phi)
         phi = self.adp_pool_miniConv(phi)
         phi = phi.flatten(start_dim = 1)  # Keep a batch_size = num_glimpses for predictions at each scale
         phi_out = F.relu(self.fc1(phi)) # feed phi to respective fc layer

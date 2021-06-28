@@ -14,3 +14,4 @@ archive
 *.png
 *.mp4
 *.tar
+.json

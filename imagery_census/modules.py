@@ -359,11 +359,13 @@ class ActionNetwork(nn.Module):
         
         super().__init__()
         
-        input_size = input_size + 202
+#         input_size = input_size + 202
+        
+        fc_cont_size = (output_size * 2) + 202
 
         self.fc_class1 = nn.Linear(input_size, output_size)
         self.fc_class2 = nn.Linear(output_size * 2, output_size)
-        self.fc_cont = nn.Linear(output_size * 2, 1)
+        self.fc_cont = nn.Linear(fc_cont_size, 1)
         
         
     def forward(self, h_t, census):
@@ -372,15 +374,13 @@ class ActionNetwork(nn.Module):
         
 #         print(census)
         
-        census = census.repeat(2, 1).to(device)
+        census = census.squeeze().to(device)#.repeat(2, 1).to(device)
         
-        h_t = torch.cat((h_t, census), dim = 1)
-        
-        
+#         h_t = torch.cat((h_t, census), dim = 1)
                         
         # Input a_t into classifer for preds for each class for num_glimpses == 2, shape will be [2, 256]
-        a_t_class = F.log_softmax(self.fc_class1(h_t), dim = 1).flatten(start_dim = 0) # shape goes from [2,4] -> [1,8]
-        a_t_cont = self.fc_cont(a_t_class)
+        a_t_class = F.log_softmax(self.fc_class1(h_t), dim = 1).flatten(start_dim = 0) # shape goes from [2,4] -> [1,8]        
+        a_t_cont = self.fc_cont(torch.cat((a_t_class, census), dim = 0))
         a_t_class = F.log_softmax(self.fc_class2(a_t_class), dim = 0).unsqueeze(0)
         
         return a_t_class, a_t_cont

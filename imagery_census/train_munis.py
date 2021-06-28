@@ -48,6 +48,11 @@ train_indices = random.sample(range(0, len(image_names)), train_num)
 val_indices = [i for i in range(0, len(image_names)) if i not in train_indices]
 
 
+# train_num = int(25 * .70)
+# train_indices = random.sample(range(0, 25), train_num)
+# val_indices = [i for i in range(0, 25) if i not in train_indices]
+
+
 batch_size = 1
 train = [(torchvision.transforms.functional.adjust_brightness(load_inputs(image_names[i]), brightness_factor = 2).squeeze(), y_class[i], y_mig[i], torch.tensor(census_data[i])) for i in train_indices]
 val = [(torchvision.transforms.functional.adjust_brightness(load_inputs(image_names[i]), brightness_factor = 2).squeeze(), y_class[i], y_mig[i], torch.tensor(census_data[i])) for i in val_indices]
