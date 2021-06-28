@@ -71,9 +71,9 @@ class miniConv(torch.nn.Module):
         self.layer2_miniConv = resnet.layer2
         self.layer3_miniConv = resnet.layer3
         self.layer4_miniConv = resnet.layer4
-        self.adp_pool_miniConv = torch.nn.AdaptiveAvgPool3d((512, 7, 7))
+        self.adp_pool_miniConv = torch.nn.AdaptiveAvgPool3d((512, 1, 1))
         
-        D_in = 1 * 512 * 7 * 7
+        D_in = 1 * 512 * 1 * 1
         h_g = 512
         self.fc1 = torch.nn.Linear(D_in, h_g)#.to('cuda:1')
         

@@ -12,3 +12,5 @@ __pycache__
 archive
 *.csv
 *.png
+*.mp4
+*.tar

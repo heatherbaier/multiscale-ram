@@ -12,13 +12,16 @@
 
 ### Classification Model Results
 
-|       Model            |   Binary Acc.  |   # Best Epoch  | # Total Epochs  |  Improvement
+|       Model            |     Acc.       |   # Best Epoch  | # Total Epochs  |  Improvement
 |------------------------|----------------|-----------------|-----------------|--------------
 | Baseline (OG RAM)      |     66.73%     |        83       |       132       |      --
 | Ratio scaled to size   |     70.99%     |        46       |        97       |     4.26%
-| Ratio no scaling       |     67.892     |        91       |       142       |     1.16%
+| Ratio no scaling       |     67.89%     |        91       |       142       |     1.16%
 | Ratio interpolate      |     70.60%     |       114       |       155       |     3.87%
-| Continuous             |    1426.60    |        170       |                 |      --
+| Continuous (imagery)   |    1280.28     |       161       |       200       |      --
+| Continuous (i + c)     |    1642.93     |        44       |                 |      --
+
+
 
 ### References
 1. https://arxiv.org/pdf/1406.6247.pdf

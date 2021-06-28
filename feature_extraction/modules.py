@@ -12,34 +12,11 @@ import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
 os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 
+
 resnet = torchvision.models.resnet18()
 
+
 device = "cuda"
-
-
-class miniConv(torch.nn.Module):
-    def __init__(self, resnet):
-        super().__init__()
-        
-        self.conv1 = resnet.conv1
-        self.bn1 = resnet.bn1
-        self.relu = resnet.relu
-        self.maxpool = resnet.maxpool
-        self.layer1 = resnet.layer1
-        self.adp_pool = torch.nn.AdaptiveAvgPool3d((64, 7, 7))
-        
-    def forward(self, x):
-        
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.maxpool(x)
-        x = self.layer1(x)
-        x = self.adp_pool(x)
-        # Keep a batch_size = num_glimpses for predictions at each scale
-        x = x.flatten(start_dim = 1)
-        return x
-        
-
 
 
 class Retina:
@@ -244,31 +221,29 @@ class GlimpseNetwork(nn.Module):
 
         self.retina = Retina(g, k, s)
 
-        # glimpse layer
-#         D_in = k * g * g * c
-        D_in = 1 * 512 * 7 * 7
-        print("H_g: ", h_g)
-        self.fc1 = nn.Linear(D_in, h_g)#.to('cuda:1')
+        # Glimpse layer (dims are [1, final_layer_size, 1, 1])
+        D_in = 1 * 128 * 1 * 1
+        self.fc1 = nn.Linear(D_in, h_g)
 
-        # location layer
+        # location layer (D_in is the number of zoomed in glimpses)
         D_in = 2
-        self.fc2 = nn.Linear(D_in, h_l)#.to('cuda:1')
+        self.fc2 = nn.Linear(D_in, h_l)
 
-        self.fc3 = nn.Linear(h_g, h_g + h_l)#.to('cuda:1')
-        self.fc4 = nn.Linear(h_l, h_g + h_l)#.to('cuda:1')
-        
-#         self.adp_pool = torch.nn.AdaptiveMaxPool1d((2000))
-        
-        
+        # Final fully connected layers for wath & where
+        self.fc3 = nn.Linear(h_g, h_g + h_l)
+        self.fc4 = nn.Linear(h_l, h_g + h_l)
+                
+        # Resnet18 convolutional layers for the glimpse 
         self.conv1_miniConv = resnet.conv1.to(device)
         self.bn1_miniConv = resnet.bn1.to(device)
         self.relu_miniConv = resnet.relu.to(device)
         self.maxpool_miniConv = resnet.maxpool.to(device)
         self.layer1_miniConv = resnet.layer1.to(device)
         self.layer2_miniConv = resnet.layer2.to(device)
-        self.layer3_miniConv = resnet.layer3.to(device)
-        self.layer4_miniConv = resnet.layer4.to(device)
-        self.adp_pool_miniConv = torch.nn.AdaptiveAvgPool3d((512, 7, 7)).to(device)
+#         self.layer3_miniConv = resnet.layer3.to(device)
+#         self.layer4_miniConv = resnet.layer4.to(device)
+        self.adp_pool_miniConv = torch.nn.AdaptiveAvgPool2d((1, 1)).to(device)
+#         self.adp_pool_miniConv = torch.nn.AdaptiveAvgPool2d((512, 1, 1)).to(device)
         
         
     def forward(self, x, l_t_prev):
@@ -276,33 +251,30 @@ class GlimpseNetwork(nn.Module):
         # generate glimpse phi from image x
         phi = self.retina.foveate(x, l_t_prev)
         
-        
         # minConv layers (these need to be here in order to be registered as trainable model paramerters)
         phi = self.conv1_miniConv(phi)
         phi = self.bn1_miniConv(phi)
         phi = self.relu_miniConv(phi)
         phi = self.maxpool_miniConv(phi)
         phi = self.layer1_miniConv(phi)
+        phi = self.layer2_miniConv(phi)
+#         phi = self.layer3_miniConv(phi)
+#         phi = self.layer4_miniConv(phi)
         phi = self.adp_pool_miniConv(phi)
-        # Keep a batch_size = num_glimpses for predictions at each scale
-        phi = phi.flatten(start_dim = 1)  
-        
+        phi = phi.flatten(start_dim = 1)  # Keep a batch_size = num_glimpses for predictions at each scale
+        phi_out = F.relu(self.fc1(phi)) # feed phi to respective fc layer
 
-        # flatten location vector
-        l_t_prev = l_t_prev.view(l_t_prev.size(0), -1)
-
-        # feed phi and l to respective fc layers
-        phi_out = F.relu(self.fc1(phi))
+        # flatten location vector & feed to respective fc layer
+        l_t_prev = l_t_prev.view(l_t_prev.size(0), -1)        
         l_out = F.relu(self.fc2(l_t_prev))
 
+        # Final fully connected layers 
         what = self.fc3(phi_out)
         where = self.fc4(l_out)
 
-        # feed to fc layer
+        # Add together what & where and activate
         g_t = F.relu(what + where)
         
-#         print("g_t.shape", g_t.shape)
-
         return g_t
 
 
@@ -351,7 +323,7 @@ class CoreNetwork(nn.Module):
         self.h2h = nn.Linear(hidden_size, hidden_size)
 
     def forward(self, g_t, h_t_prev):
-#         print(g_t.shape)
+#         print("g_t.shape: ", g_t.shape)
         h1 = self.i2h(g_t)
         h2 = self.h2h(h_t_prev)
         h_t = F.relu(h1 + h2)
@@ -435,25 +407,23 @@ class LocationNetwork(nn.Module):
         super().__init__()
 
         self.std = std
-
-#         hid_size = input_size // 2
-#         self.fc = nn.Linear(input_size, hid_size)
-#         self.fc_lt = nn.Linear(hid_size, output_size)
+        
+        input_size = input_size * 2
+        
+#         print("location input: ", input_size, "hidden: ", output_size)
         
         # Flattened specs for 2 glimpses
-        input_size = 512
+#         input_size = 64
         hid_size = input_size // 2
         self.fc = nn.Linear(input_size, hid_size)
         self.fc_lt = nn.Linear(hid_size, output_size)        
 
     def forward(self, h_t):
-        
-#         print("H_t.shape: ", h_t.shape)
-        
+                
         h_t = h_t.flatten(start_dim = 0).unsqueeze(0)
         
-#         print("H_t.shape: ", h_t.shape)
-        
+#         print("h_t.shape: ", h_t.shape)
+                
         # compute mean
         feat = F.relu(self.fc(h_t.detach()))
         mu = torch.tanh(self.fc_lt(feat))
