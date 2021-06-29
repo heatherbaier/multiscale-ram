@@ -20,7 +20,16 @@
 | Ratio interpolate      |     70.60%     |         |       114       |       155       |     3.87%
 | Continuous (imagery)   |    1280.28     | .55/.6  |       161       |       200       |      --
 | Continuous (i + c) v1  |    1387.54     |   .48   |       129       |       180       |  * Census data in h_t before all of the FC layers
-| Continuous (i + c) v2  |    1391.49     |         |        48       |                 |  * Census data placed only in fc_cont 
+| Continuous (i + c) v2  |    1304.42     |   .51   |       126       |                 |  * Census data placed only in fc_cont 
+
+
+### kfold Results
+
+| kfold	 |   Final Validation MAE	|  Final Validation R2	|  Final All MAE 	|  Final All R2  |
+|--------|--------------------------|-----------------------|-------------------|----------------|
+| kfold1 |       1453.784514        |     0.2943585891	    |   1496.044019	    |  0.2576541863  |
+| Kfold2 |       1315.566959        |     0.2351644732	    |   1464.65032	    |  0.4138517772  |
+
 
 
 ### References
