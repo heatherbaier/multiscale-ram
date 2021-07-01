@@ -17,3 +17,5 @@ archive
 .json
 kfold1
 kfold2
+imagery_nobatching/
+imagery_noclass/

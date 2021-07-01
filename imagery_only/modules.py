@@ -259,16 +259,33 @@ class GlimpseNetwork(nn.Module):
         phi = phi.flatten(start_dim = 1)  # Keep a batch_size = num_glimpses for predictions at each scale
         phi_out = F.relu(self.fc1(phi)) # feed phi to respective fc layer
 
+        print("phi_out", phi_out.shape)
+        
+        
         # flatten location vector & feed to respective fc layer
         l_t_prev = l_t_prev.view(l_t_prev.size(0), -1)        
         l_out = F.relu(self.fc2(l_t_prev))
+        
+        
+        print("l_out", l_out.shape)
+        
 
         # Final fully connected layers 
         what = self.fc3(phi_out)
+        
+        print("what", what.shape)
+        
         where = self.fc4(l_out)
+        
+        print("where", where.shape)
 
         # Add together what & where and activate
         g_t = F.relu(what + where)
+        
+        
+        print("g_t", g_t.shape)
+        
+#         sdgaag
         
         return g_t
 
@@ -306,10 +323,6 @@ class CoreNetwork(nn.Module):
 
     def __init__(self, input_size, hidden_size):
         super().__init__()
-        
-#         print("input: ", input_size, "hidden: ", hidden_size)
-        
-#         input_size = 644
 
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -318,10 +331,24 @@ class CoreNetwork(nn.Module):
         self.h2h = nn.Linear(hidden_size, hidden_size)
 
     def forward(self, g_t, h_t_prev):
-#         print("g_t.shape: ", g_t.shape)
+        
+        print("g_t.shape: ", g_t.shape)
+        
+        print("h_t_prev.shape: ", h_t_prev.shape)
+        
+#         fasd
+        
+        
         h1 = self.i2h(g_t)
         h2 = self.h2h(h_t_prev)
+        
+        print("h1.shape: ", h1.shape)
+        
+        print("h2.shape: ", h2.shape)        
+        
+        
         h_t = F.relu(h1 + h2)
+                
         return h_t
 
 
@@ -417,16 +444,29 @@ class LocationNetwork(nn.Module):
                 
         h_t = h_t.flatten(start_dim = 0).unsqueeze(0)
         
-#         print("h_t.shape: ", h_t.shape)
-                
+        print("h_t: ", h_t.shape)
+                        
         # compute mean
         feat = F.relu(self.fc(h_t.detach()))
         mu = torch.tanh(self.fc_lt(feat))
+        
+        print("feat: ", feat.shape)
+        
+        
+        print("mu: ", mu.shape)
 
         # reparametrization trick
         l_t = torch.distributions.Normal(mu, self.std).rsample()
         l_t = l_t.detach()
+        
+        print("l_t: ", l_t.shape)
+        
         log_pi = Normal(mu, self.std).log_prob(l_t)
+        
+        print("log_pi: ", log_pi.shape)
+        
+        
+        asasd
 
         # we assume both dimensions are independent
         # 1. pdf of the joint is the product of the pdfs
@@ -435,6 +475,10 @@ class LocationNetwork(nn.Module):
 
         # bound between [-1, 1]
         l_t = torch.clamp(l_t, -1, 1)
+        
+        
+        
+        
 
         return log_pi, l_t
 
