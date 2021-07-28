@@ -1,21 +1,16 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
 from torch.distributions import Normal
-
+import torch.nn.functional as F
 import matplotlib.pyplot as plt
-
+import torch.nn as nn
 import torchvision
-
+import torch
 import os
+
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 
 resnet = torchvision.models.resnet18()
-
-
 device = "cuda"
 
 
@@ -363,16 +358,26 @@ class ActionNetwork(nn.Module):
 
         self.fc_class1 = nn.Linear(input_size, output_size)
         self.fc_class2 = nn.Linear(output_size * 2, output_size)
-        self.fc_cont = nn.Linear(output_size * 2, 1)
         
+        self.fc_cont1 = nn.Linear(input_size * 2, 128)
+        self.relu = nn.ReLU()
+        self.fc_cont2 = nn.Linear(128, 64)
+        self.fc_cont3 = nn.Linear(64, 32)
+        self.fc_cont4 = nn.Linear(32, 1)
+#         self.fc_cont2 = nn.Linear(2, 1)
         
     def forward(self, h_t):
                         
         # Input a_t into classifer for preds for each class for num_glimpses == 2, shape will be [2, 256]
         a_t_class = F.log_softmax(self.fc_class1(h_t), dim = 1).flatten(start_dim = 0) # shape goes from [2,2] -> [1,4]
-        a_t_cont = self.fc_cont(a_t_class)
         a_t_class = F.log_softmax(self.fc_class2(a_t_class), dim = 0).unsqueeze(0)
-        
+                
+        a_t_cont = self.fc_cont1(h_t.flatten(start_dim = 0))#.flatten(start_dim = 0)
+        a_t_cont = self.relu(a_t_cont)
+        a_t_cont = self.fc_cont2(a_t_cont)#.flatten(start_dim = 0)
+        a_t_cont = self.fc_cont3(a_t_cont)#.flatten(start_dim = 0)
+        a_t_cont = self.fc_cont4(a_t_cont)#.flatten(start_dim = 0)
+
         return a_t_class, a_t_cont
 
 
@@ -428,10 +433,8 @@ class LocationNetwork(nn.Module):
         # compute mean
         feat = F.relu(self.fc(h_t.detach()))
         
-        
         # DAN: TRY THIS 
         # feat = F.tanh(self.fc(h_t.detach()))
-        
         
         mu = torch.tanh(self.fc_lt(feat))
                 

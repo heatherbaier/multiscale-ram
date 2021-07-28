@@ -19,3 +19,6 @@ kfold1
 kfold2
 imagery_nobatching/
 imagery_noclass/
+negative_one/
+pred_on_ht_stillclass/
+tanh_change_only/
