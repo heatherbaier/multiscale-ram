@@ -22,3 +22,5 @@ imagery_noclass/
 negative_one/
 pred_on_ht_stillclass/
 tanh_change_only/
+epoch_distributions
+viz
